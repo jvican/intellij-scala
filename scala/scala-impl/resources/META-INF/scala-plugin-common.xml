@@ -139,6 +139,7 @@
         <problemFileHighlightFilter implementation="org.jetbrains.plugins.scala.annotator.ScalaProblemFileHighlightFilter"/>
       <externalSystemTaskNotificationListener
               implementation="org.jetbrains.plugins.scaladev.IdeaSourcesAttachListener"/>
+        <externalSystemTaskNotificationListener implementation="org.jetbrains.plugins.scala.components.libextensions.LibraryExtensionsSBTListener"/>
 
         <framework.type implementation="org.jetbrains.plugins.scala.project.template.ScalaFrameworkType"/>
         <completion.contributor language="Scala" id="keywordCompletionContributor"
