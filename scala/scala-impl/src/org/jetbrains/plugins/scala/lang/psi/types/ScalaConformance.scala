@@ -1163,21 +1163,18 @@ trait ScalaConformance extends api.Conformance {
       r.visitType(rightVisitor)
       if (result != null) return
 
-      val tptsMap = new mutable.HashMap[String, TypeParameterType]()
-      def updateType(t: ScType, rejected: HashSet[String] = HashSet.empty): ScType = {
+      val tptsMap = new mutable.HashMap[ScExistentialArgument, TypeParameterType]()
+      def updateType(t: ScType): ScType = {
         t.recursiveUpdate {
-          case ScExistentialArgument(name, _, _, _) =>
-            e.wildcards.find(_.name == name) match {
-              case Some(ScExistentialArgument(thatName, args, lower, upper)) if !rejected.contains(thatName) =>
-                val lightTypeParam = TypeParameter.light(name, args.map(_.typeParameter), lower, upper)
-                val tpt = tptsMap.getOrElseUpdate(thatName, TypeParameterType(lightTypeParam))
-                ReplaceWith(tpt)
-              case _ => ProcessSubtypes
-            }
-          case ScExistentialType(innerQ, wilds) =>
-            ReplaceWith(ScExistentialType(updateType(innerQ, rejected ++ wilds.map(_.name)), wilds))
-          case ScDesignatorType(des) if !rejected.contains(des.name) =>
-            e.wildcards.find(_.name == des.name).map(p => ReplaceWith(p.upper)).getOrElse(ProcessSubtypes)
+          case exArg @ ScExistentialArgument(argName, args, lower, upper) =>
+            def lightTypeParam =
+              TypeParameter.light(argName, args.map(_.typeParameter), lower, upper)
+            val tpt = tptsMap.getOrElseUpdate(exArg, TypeParameterType(lightTypeParam))
+            ReplaceWith(tpt)
+          case ScExistentialType(innerQ, _) =>
+            ReplaceWith(ScExistentialType(updateType(innerQ)))
+//          case ScDesignatorType(des) if !rejected.contains(des.name) =>
+//            e.wildcards.find(_.name == des.name).map(p => ReplaceWith(p.upper)).getOrElse(ProcessSubtypes)
           case _ => ProcessSubtypes
         }
       }
@@ -1195,13 +1192,13 @@ trait ScalaConformance extends api.Conformance {
           case Some(uSubst) =>
             for (tpt <- tptsMap.values if result == null) {
               val substedTpt = uSubst.subst(tpt)
-              var t = conformsInner(substedTpt, uSubst.subst(updateType(tpt.lowerType)), immutable.Set.empty, undefinedSubst)
+              var t = conformsInner(substedTpt, tpt.lowerType, immutable.Set.empty, undefinedSubst)
               if (substedTpt != tpt && !t._1) {
                 result = (false, undefinedSubst)
                 return
               }
               undefinedSubst = t._2
-              t = conformsInner(uSubst.subst(updateType(tpt.upperType)), substedTpt, immutable.Set.empty, undefinedSubst)
+              t = conformsInner(tpt.upperType, substedTpt, immutable.Set.empty, undefinedSubst)
               if (substedTpt != tpt && !t._1) {
                 result = (false, undefinedSubst)
                 return

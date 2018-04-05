@@ -82,14 +82,13 @@ package object types {
     }
 
     def removeVarianceAbstracts(): ScType = {
-      var index = 0
       scType.recursiveVarianceUpdate((tp: ScType, v: Variance) => {
         tp match {
-          case ScAbstractType(_, lower, upper) =>
+          case ScAbstractType(typeParam, lower, upper) =>
             v match {
               case Contravariant => (true, lower)
               case Covariant     => (true, upper)
-              case Invariant     => (true, ScExistentialArgument(s"_$$${index += 1; index}", Nil, lower, upper))
+              case Invariant     => (true, ScExistentialArgument("_", Nil, lower, upper, typeParam.psiTypeParameter))
             }
           case _ => (false, tp)
         }

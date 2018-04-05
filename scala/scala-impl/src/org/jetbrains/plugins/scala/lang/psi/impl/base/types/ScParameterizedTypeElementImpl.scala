@@ -133,12 +133,12 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
     typeArgList.typeArgs.find {
       case e: ScFunctionalTypeElement if isKindProjectorFunctionSyntax(e) => true
       case e if isKindProjectorInlineSyntax(e) => true
-      case _: ScWildcardTypeElementImpl => true
+//      case _: ScWildcardTypeElementImpl => true
       case _ => false
     } match {
       case Some(fun) if isKindProjectorFunctionSyntax(fun) => kindProjectorFunctionSyntax(fun)
       case Some(e) if isKindProjectorInlineSyntax(e) => kindProjectorInlineSyntax(e)
-      case Some(_) => existentialType
+//      case Some(_) => existentialType
       case _ => null
     }
   }
@@ -188,7 +188,12 @@ class ScParameterizedTypeElementImpl(node: ASTNode) extends ScalaPsiElementImpl(
     typeArgList.typeArgs match {
       case Seq() => tr
       case args =>
-        val result = ScParameterizedType(res, args.map(_.`type`().getOrAny))
+        val parameterized = ScParameterizedType(res, args.map(_.`type`().getOrAny))
+        val hasWildcards = args.exists {
+          case _: ScWildcardTypeElement | _: ScTypeVariableTypeElement => true
+          case _ => false
+        }
+        val result = if (hasWildcards) ScExistentialType(parameterized) else parameterized
         Right(result)
     }
   }

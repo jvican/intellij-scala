@@ -118,7 +118,7 @@ case class MostSpecificUtil(elem: PsiElement, length: Int) {
         def calcParams(tp: ScType, existential: Boolean): Either[Seq[Parameter], ScType] = {
 
           def toExistentialArg(tp: TypeParameter) =
-            ScExistentialArgument(tp.name, List.empty /* todo? */ , tp.lowerType, tp.upperType)
+            ScExistentialArgument(tp.name, List.empty /* todo? */ , tp.lowerType, tp.upperType, tp.psiTypeParameter)
 
           tp match {
             case ScMethodType(_, params, _) => Left(params)
@@ -129,7 +129,7 @@ case class MostSpecificUtil(elem: PsiElement, length: Int) {
               } else {
                 val s = ScSubstitutor.bind(typeParams)(toExistentialArg)
                 val arguments = typeParams.toList.map(tp =>
-                  ScExistentialArgument(tp.name, List.empty /* todo? */ , s.subst(tp.lowerType), s.subst(tp.upperType)))
+                  ScExistentialArgument(tp.name, List.empty /* todo? */ , s.subst(tp.lowerType), s.subst(tp.upperType), tp.psiTypeParameter))
                 Left(params.map(p => p.copy(paramType = ScExistentialType(s.subst(p.paramType), arguments))))
               }
             case ScTypePolymorphicType(internal, typeParams) =>
@@ -139,7 +139,7 @@ case class MostSpecificUtil(elem: PsiElement, length: Int) {
               } else {
                 val s = ScSubstitutor.bind(typeParams)(toExistentialArg)
                 val arguments = typeParams.toList.map(tp =>
-                  ScExistentialArgument(tp.name, List.empty /* todo? */ , s.subst(tp.lowerType), s.subst(tp.upperType)))
+                  ScExistentialArgument(tp.name, List.empty /* todo? */ , s.subst(tp.lowerType), s.subst(tp.upperType), tp.psiTypeParameter))
                 Right(ScExistentialType(s.subst(internal), arguments))
               }
             case _ => Right(tp)

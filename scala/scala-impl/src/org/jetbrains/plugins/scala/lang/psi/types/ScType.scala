@@ -47,20 +47,14 @@ trait ScType extends ProjectContextOwner {
   def inferValueType: ValueType
 
   protected def unpackedTypeInner: ScType = {
-    val existingWildcards = ScExistentialType.existingWildcards(this)
-    val wildcards = new ArrayBuffer[ScExistentialArgument]
-    val quantified = recursiveVarianceUpdateModifiable[Set[String]](Set.empty, {
-      case (s: ScExistentialArgument, _, data) if !data.contains(s.name) =>
-        val name = ScExistentialType.fixExistentialArgumentName(s.name, existingWildcards)
-        if (!wildcards.exists(_.name == name)) wildcards += ScExistentialArgument(name, s.args, s.lower, s.upper)
-        (true, ScExistentialArgument(name, s.args, s.lower, s.upper), data)
-      case (ex: ScExistentialType, _, data) =>
-        (false, ex, data ++ ex.boundNames)
-      case (t, _, data) => (false, t, data)
-    })
-    if (wildcards.nonEmpty) {
-      ScExistentialType(quantified, wildcards.toList).simplify()
-    } else quantified
+    this match {
+      case ex: ScExistentialType => ex
+      case other =>
+        ScExistentialType(other) match {
+          case newEx: ScExistentialType => newEx.simplify()
+          case _ => this
+        }
+    }
   }
 
   /**

@@ -59,7 +59,7 @@ class ScProjectionType private(val projected: ScType,
           case _ =>
         }
         val existentialArgs = ta.typeParameters
-          .map(tp => ScExistentialArgument(tp.name + "$$", Nil, Nothing, Any))
+          .map(tp => ScExistentialArgument(tp.name, Nil, Nothing, Any, ta))
           .toList
 
         val genericSubst = ScSubstitutor.bind(ta.typeParameters, existentialArgs)

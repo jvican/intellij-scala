@@ -56,11 +56,11 @@ object ScUndefinedSubstitutor {
               case Covariant     => (true, upper, data)
               case Invariant     => (true, absLower /*ScExistentialArgument(s"_$$${index += 1; index}", Nil, absLower, upper)*/ , data) //todo: why this is right?
             }
-          case (ScExistentialArgument(nm, _, skoLower, upper), variance, data) if !data.contains(nm) =>
+          case (ScExistentialArgument(nm, tpts, skoLower, upper), variance, data) if !data.contains(nm) =>
             variance match {
               case Contravariant => (true, skoLower, data)
               case Covariant     => (true, upper, data)
-              case Invariant     => (true, ScExistentialArgument(s"_$$${index += 1; index}", Nil, skoLower, upper), data)
+              case Invariant     => (true, ScExistentialArgument("_", tpts, skoLower, upper, {index += 1; index}), data)
             }
           case (ex: ScExistentialType, _, data) => (false, ex, data ++ ex.boundNames)
           case (tp, _, data) => (false, tp, data)
@@ -78,21 +78,21 @@ object ScUndefinedSubstitutor {
         absUpper // lower will be added separately
       case ScAbstractType(_, _, absUpper) if v == Covariant && absUpper.equiv(Any) => Any
       case _ =>
-        rawUpper.recursiveVarianceUpdateModifiable[Set[String]](Set.empty, {
-          case (ScAbstractType(_, lower, absUpper), variance, data) =>
+        rawUpper.recursiveVarianceUpdate ({
+          case (abs @ ScAbstractType(tp, lower, absUpper), variance) =>
             variance match {
-              case Contravariant => (true, lower, data)
-              case Covariant     => (true, absUpper, data)
-              case Invariant     => (true, ScExistentialArgument(s"_$$${index += 1; index}", Nil, lower, absUpper), data) //todo: why this is right?
+              case Contravariant => (true, lower)
+              case Covariant     => (true, absUpper)
+              case Invariant     => (true, ScExistentialArgument(tp.name, tp.typeParameters.toList.map(TypeParameterType(_)), lower, absUpper, {index += 1; index})) //todo: why this is right?
             }
-          case (ScExistentialArgument(nm, _, lower, skoUpper), variance, data) if !data.contains(nm) =>
+          case (ScExistentialArgument(nm, tpts, lower, skoUpper), variance) =>
             variance match {
-              case Contravariant => (true, lower, data)
-              case Covariant     => (true, skoUpper, data)
-              case Invariant     => (true, ScExistentialArgument(s"_$$${index += 1; index}", Nil, lower, skoUpper), data)
+              case Contravariant => (true, lower)
+              case Covariant     => (true, skoUpper)
+              case Invariant     => (true, ScExistentialArgument(nm, tpts, lower, skoUpper, {index += 1; index}))
             }
-          case (ex: ScExistentialType, _, data) => (false, ex, data ++ ex.boundNames)
-          case (tp, _, data) => (false, tp, data)
+          case (ex: ScExistentialType, _) => (false, ex)
+          case (tp, _) => (false, tp)
         }, v)
     }
     updated.unpackedType
