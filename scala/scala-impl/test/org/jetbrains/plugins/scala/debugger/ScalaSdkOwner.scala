@@ -7,11 +7,6 @@ import org.jetbrains.plugins.scala.base.libraryLoaders.LibraryLoader
 
 import scala.collection.mutable.ListBuffer
 
-case object Scala_2_13 extends ScalaVersion {
-  override final val major: String = "2.13"
-  override final val minor: String = "2.13.0-M3"
-}
-
 trait ScalaSdkOwner {
   implicit val version: ScalaVersion
 
