@@ -13,9 +13,6 @@ import org.jetbrains.plugins.scala.lang.psi.types.recursiveUpdate.{ScSubstitutor
 import org.jetbrains.plugins.scala.lang.refactoring.util.ScTypeUtil.AliasType
 import org.jetbrains.plugins.scala.project.ProjectContext
 
-import scala.annotation.tailrec
-import scala.collection.mutable
-
 /**
   * @author ilyas
   */
@@ -228,7 +225,7 @@ object ScExistentialType {
     */
   private def simplifiedAndUsedWildcards(quantified: ScType): (ScType, Set[ScExistentialArgument]) = {
     quantified match {
-      case arg: ScExistentialArgument => (arg.upper, Set(arg)) //treat top level as Covariant
+      case arg: ScExistentialArgument => (arg.upper, Set(arg)) //treat single existential arg as Covariant
       case _ =>
         var wildcards = Set.empty[ScExistentialArgument]
 
@@ -247,36 +244,6 @@ object ScExistentialType {
           case (tp, _) => (false, tp)
         }
         (quantified.recursiveVarianceUpdate(simplification, Invariant), wildcards)
-    }
-  }
-
-  def existingWildcards(tp: ScType): Set[String] = {
-    val existingWildcards = new mutable.HashSet[String]
-    tp.visitRecursively {
-      case ex: ScExistentialType => existingWildcards ++= ex.boundNames
-      case _ =>
-    }
-    existingWildcards.toSet
-  }
-
-  @tailrec
-  def fixExistentialArgumentName(name: String, existingWildcards: Set[String]): String = {
-    if (existingWildcards.contains(name)) {
-      fixExistentialArgumentName(name + "$u", existingWildcards) //todo: fix it for name == "++"
-    } else name
-  }
-
-  def fixExistentialArgumentNames(tp: ScType, existingWildcards: Set[String]): ScType = {
-    if (existingWildcards.isEmpty) tp
-    else {
-      tp.recursiveVarianceUpdateModifiable[Set[String]](Set.empty, {
-        case (s: ScExistentialArgument, _, data) if !data.contains(s.name) =>
-          val name = fixExistentialArgumentName(s.name, existingWildcards)
-          (true, ScExistentialArgument(name, s.args, s.lower, s.upper), data)
-        case (ex: ScExistentialType, _, data) =>
-          (false, ex, data ++ ex.boundNames)
-        case (t, _, data) => (false, t, data)
-      })
     }
   }
 }
@@ -307,18 +274,19 @@ class ScExistentialArgument private (val name: String,
   def withBounds(newLower: ScType, newUpper: ScType): ScExistentialArgument =
     new ScExistentialArgument(name, args, newLower, newUpper, id)
 
-  def withoutAbstracts: ScExistentialArgument = ScExistentialArgument(name, args, lower.removeAbstracts, upper.removeAbstracts)
+  def withoutAbstracts: ScExistentialArgument = ScExistentialArgument(name, args, lower.removeAbstracts, upper.removeAbstracts, id)
 
   override def updateSubtypes(updates: Seq[Update], visited: Set[ScType]): ScExistentialArgument = {
     ScExistentialArgument(name, args,
       lower.recursiveUpdateImpl(updates, visited),
-      upper.recursiveUpdateImpl(updates, visited))
+      upper.recursiveUpdateImpl(updates, visited),
+      id)
   }
 
   def recursiveVarianceUpdateModifiableNoUpdate[T](data: T, update: (ScType, Variance, T) => (Boolean, ScType, T),
                                                             variance: Variance = Covariant): ScExistentialArgument = {
     ScExistentialArgument(name, args, lower.recursiveVarianceUpdateModifiable(data, update, Contravariant),
-      upper.recursiveVarianceUpdateModifiable(data, update, Covariant))
+      upper.recursiveVarianceUpdateModifiable(data, update, Covariant), id)
   }
 
   override def recursiveVarianceUpdateModifiable[T](data: T, update: (ScType, Variance, T) => (Boolean, ScType, T),
@@ -350,7 +318,7 @@ class ScExistentialArgument private (val name: String,
 }
 
 object ScExistentialArgument {
-  def apply(name: String, args: List[TypeParameterType], lower: ScType, upper: ScType, id: Int = 0) =
+  def apply(name: String, args: List[TypeParameterType], lower: ScType, upper: ScType, id: Int) =
     new ScExistentialArgument(name, args, lower, upper, id)
 
   def apply(name: String, args: List[TypeParameterType], lower: ScType, upper: ScType, psi: PsiElement) =
