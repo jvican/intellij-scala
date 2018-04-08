@@ -4,4 +4,4 @@ abstract class A[T] {
 
 val x: (A[T] forSome {type T})#X[Y] forSome {type Y; type T} = null
 /*start*/x/*end*/
-//(A[_])#X[_]
+//(A[T]#X[Y]) forSome {type T; type Y}

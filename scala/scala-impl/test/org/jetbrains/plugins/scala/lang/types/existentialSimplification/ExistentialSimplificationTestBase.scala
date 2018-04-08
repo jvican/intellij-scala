@@ -42,21 +42,20 @@ abstract class ExistentialSimplificationTestBase extends ScalaLightPlatformCodeI
     val addOne = if(PsiTreeUtil.getParentOfType(scalaFile.findElementAt(startOffset),classOf[ScExpression]) != null) 0 else 1 //for xml tests
     val expr: ScExpression = PsiTreeUtil.findElementOfClassAtRange(scalaFile, startOffset + addOne, endOffset, classOf[ScExpression])
     assert(expr != null, "Not specified expression in range to infer type.")
-    expr.`type`() match {
-      case Right(ttypez: ScExistentialType) =>
-
-        val res = ttypez.simplify().presentableText
-        val lastPsi = scalaFile.findElementAt(scalaFile.getText.length - 1)
-        val text = lastPsi.getText
-        val output = lastPsi.getNode.getElementType match {
-          case ScalaTokenTypes.tLINE_COMMENT => text.substring(2).trim
-          case ScalaTokenTypes.tBLOCK_COMMENT | ScalaTokenTypes.tDOC_COMMENT =>
-            text.substring(2, text.length - 2).trim
-          case _ => assertTrue("Test result must be in last comment statement.", false)
-        }
-        assertEquals(output, res)
-      case Right(_) => fail("Expression has not existential type")
-      case Failure(msg) => fail(msg)
+    val simplified = expr.`type`() match {
+      case Right(ex: ScExistentialType) => ex.simplify()
+      case Right(other) => other
+      case Failure(msg) => fail(msg); ???
     }
+    val res = simplified.presentableText
+    val lastPsi = scalaFile.findElementAt(scalaFile.getText.length - 1)
+    val text = lastPsi.getText
+    val output = lastPsi.getNode.getElementType match {
+      case ScalaTokenTypes.tLINE_COMMENT => text.substring(2).trim
+      case ScalaTokenTypes.tBLOCK_COMMENT | ScalaTokenTypes.tDOC_COMMENT =>
+        text.substring(2, text.length - 2).trim
+      case _ => assertTrue("Test result must be in last comment statement.", false)
+    }
+    assertEquals(output, res)
   }
 }

@@ -1,4 +1,4 @@
 class Z[T, Q]
 val x: (Z[T, Q] forSome {type T}) forSome {type Q} = null
 /*start*/x/*end*/
-//Z[_, _]
+//(Z[T, Q]) forSome {type T; type Q}
